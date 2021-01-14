@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 require("./config/database");
 const cors = require("cors");
+const passport = require("passport");
 
 const indexRouter = require("./routes/index");
 const usersRouter = require("./routes/users");
@@ -18,12 +19,17 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
 //set middlewares
+require("./config/passport")(passport);
+app.use(passport.initialize());
+
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cors());
+
+app.use(passport.authenticate("jwt", { session: false }));
 //set routes
 app.use("/", indexRouter);
 app.use("/users", usersRouter);

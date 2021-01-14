@@ -1,12 +1,15 @@
 const User = require("../models/User");
 const Blog = require("../models/Blog");
+const Viewer = require("../models/Viewer");
 const { body, validationResult } = require("express-validator");
+const utils = require("../lib/utils");
+const passport = require("passport");
 
 //home page
 exports.blog_list_get = (req, res, next) => {
   Blog.find({}, (err, result) => {
     if (err) return next(err);
-    if (result == null) {
+    if (result.length == 0) {
       res.status(200).json({ msg: "no blogs to display" });
     } else {
       res.status(200).json(result);
@@ -110,3 +113,65 @@ exports.blog_remove_delete = (req, res, next) => {
     }
   });
 };
+
+//login page
+exports.blog_login_get = [
+  (req, res, next) => {
+    console.log("req.cookie=", req.cookies.jwt);
+    console.log("authenticate=", req.authenticate);
+    console.log("user=", req.user);
+    console.log(req.isAuthenticated());
+    return res.json({ msg: "you have successfully logged in" });
+  },
+];
+
+exports.blog_login_post = (req, res, next) => {
+  Viewer.findOne({ email: req.body.email }, (err, result) => {
+    if (err) return next(err);
+    if (result.password != req.body.password) {
+      return res.status(200).json({ msg: "password wrong" });
+    }
+    if (result.password == req.body.password) {
+      const tokenObject = utils.issueJWT(result);
+      res.cookie("jwt", tokenObject.token, { maxAge: 24 * 60 * 60 * 1000 });
+      return res.status(200).json(tokenObject);
+    }
+    ``;
+  });
+};
+
+//signup page
+exports.blog_signup_get = (req, res, next) => {
+  res.status(200).json({ msg: "blog singup get not implemented" });
+};
+
+exports.blog_signup_post = [
+  body("fname", "fname cannot be empty").trim().isLength({ min: 1 }).escape(),
+  body("lname", "lname cannot be empty").trim().isLength({ min: 1 }).escape(),
+  body("email", "email cannot be empty").trim().isLength({ min: 1 }).escape(),
+  body("passowrd", "passowrd cannot be empty")
+    .trim()
+    .isLength({ min: 1 })
+    .escape(),
+  (req, res, next) => {
+    Viewer.findOne({ email: req.body.email }, (err, result) => {
+      if (err) return next(err);
+      if (result) {
+        res.status(200).json({ msg: "a user with this email already exists" });
+      }
+      if (result == null) {
+        const viewer = new Viewer({
+          fname: req.body.fname,
+          lname: req.body.lname,
+          email: req.body.email,
+          password: req.body.password,
+        }).save((err) => {
+          console.log(err);
+          if (err) return next(err);
+          res.json({ msg: "viewer saved" });
+          return;
+        });
+      }
+    });
+  },
+];
